@@ -1,0 +1,33 @@
+name: Verify
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: M0 baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: |
+          cc --version
+          python3 --version
+          make --version
+
+      - name: Clean
+        run: make clean
+
+      - name: Static and unit checks
+        run: make check
+
+      - name: Build baseline
+        run: make
