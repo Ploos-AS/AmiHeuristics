@@ -28,8 +28,8 @@ $(TEST_M68K): tests/test_m68k.c src/m68k/decode.c include/amiheuristics/m68k.h |
 $(TEST_EXEC_LVO): tests/test_exec_lvo.c src/amiga/exec_lvo.c include/amiheuristics/exec_lvo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_exec_lvo.c src/amiga/exec_lvo.c
 
-$(TEST_HUNK): tests/test_hunk.c src/file/hunk.c src/m68k/decode.c include/amiheuristics/hunk.h include/amiheuristics/m68k.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_hunk.c src/file/hunk.c src/m68k/decode.c
+$(TEST_HUNK): tests/test_hunk.c src/file/hunk.c src/m68k/decode.c src/amiga/exec_lvo.c include/amiheuristics/hunk.h include/amiheuristics/m68k.h include/amiheuristics/exec_lvo.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_hunk.c src/file/hunk.c src/m68k/decode.c src/amiga/exec_lvo.c
 
 check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK)
 	./$(TEST_SCORE)
