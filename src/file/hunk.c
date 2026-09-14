@@ -64,7 +64,7 @@ static void inspect_code(const unsigned char *data, size_t size,
             continue;
 
         report->has_a6_lvo_call = 1;
-        if (amiheur_exec_lvo_lookup(insn.lvo_offset, &info) != 0)
+        if (amiheur_exec_lvo_lookup(insn.lvo_offset, &info) <= 0)
             continue;
         if (info.classification == AMIHEUR_EXEC_LVO_CONTROL) {
             report->has_exec_control_lvo = 1;
