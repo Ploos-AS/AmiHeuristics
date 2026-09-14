@@ -16,6 +16,7 @@ typedef struct AmiHeurHunkReport {
     int has_data;
     int has_bss;
     int has_a6_lvo_call;
+    int has_execbase_a6_load;
     int has_exec_control_lvo;
     int has_exec_mutation_lvo;
     unsigned long exec_control_lvo_count;
