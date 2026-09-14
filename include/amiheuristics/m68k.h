@@ -16,6 +16,8 @@ typedef struct AmiHeurM68kInsn {
     AmiHeurM68kKind kind;
     unsigned int opcode;
     unsigned int length;
+    int is_a6_lvo;
+    int lvo_offset;
 } AmiHeurM68kInsn;
 
 int amiheur_m68k_decode(const unsigned char *data, size_t size,
