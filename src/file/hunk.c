@@ -50,12 +50,36 @@ static void finding(AmiHeurHunkReport *r, const char *id, int weight)
     r->score += weight;
 }
 
+static int has_execbase_a6_load(const unsigned char *data, size_t size)
+{
+    size_t i;
+
+    for (i = 0U; i + 3U < size; i += 2U) {
+        /* MOVEA.L $0004.W,A6 */
+        if (data[i] == 0x2cU && data[i + 1U] == 0x78U &&
+            data[i + 2U] == 0x00U && data[i + 3U] == 0x04U)
+            return 1;
+
+        /* MOVEA.L $00000004.L,A6 */
+        if (i + 5U < size && data[i] == 0x2cU && data[i + 1U] == 0x79U &&
+            data[i + 2U] == 0x00U && data[i + 3U] == 0x00U &&
+            data[i + 4U] == 0x00U && data[i + 5U] == 0x04U)
+            return 1;
+    }
+    return 0;
+}
+
 static void inspect_code(const unsigned char *data, size_t size,
                          AmiHeurHunkReport *report)
 {
     size_t i;
     AmiHeurM68kInsn insn;
     AmiHeurExecLvoInfo info;
+    int execbase_known;
+
+    execbase_known = has_execbase_a6_load(data, size);
+    if (execbase_known)
+        report->has_execbase_a6_load = 1;
 
     for (i = 0U; i + 1U < size; i += 2U) {
         if (amiheur_m68k_decode(data + i, size - i, &insn) != 0)
@@ -64,6 +88,8 @@ static void inspect_code(const unsigned char *data, size_t size,
             continue;
 
         report->has_a6_lvo_call = 1;
+        if (!execbase_known)
+            continue;
         if (amiheur_exec_lvo_lookup(insn.lvo_offset, &info) <= 0)
             continue;
         if (info.classification == AMIHEUR_EXEC_LVO_CONTROL) {
@@ -178,6 +204,8 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
         finding(report, "HUNK.RELOCATIONS", 0);
     if (report->has_a6_lvo_call)
         finding(report, "HUNK.A6_LVO_CALL", 10);
+    if (report->has_execbase_a6_load)
+        finding(report, "HUNK.EXECBASE_A6_LOAD", 0);
     if (report->has_exec_control_lvo)
         finding(report, "HUNK.EXEC_CONTROL_LVO", 5);
     if (report->has_exec_mutation_lvo)
