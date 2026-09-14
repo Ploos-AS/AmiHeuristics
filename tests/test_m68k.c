@@ -14,6 +14,35 @@ static int expect_kind(const unsigned char *bytes, size_t size,
     return 0;
 }
 
+static int test_lvo(void)
+{
+    static const unsigned char jsr_lvo[] = { 0x4eU, 0xaeU, 0xffU, 0xc4U };
+    static const unsigned char jmp_lvo[] = { 0x4eU, 0xeeU, 0xffU, 0xa0U };
+    static const unsigned char jsr_a0[] = { 0x4eU, 0x90U };
+    AmiHeurM68kInsn insn;
+
+    if (amiheur_m68k_decode(jsr_lvo, sizeof(jsr_lvo), &insn) != 0)
+        return 1;
+    if (insn.kind != AMIHEUR_M68K_JSR || insn.length != 4U)
+        return 1;
+    if (!insn.is_a6_lvo || insn.lvo_offset != -60)
+        return 1;
+
+    if (amiheur_m68k_decode(jmp_lvo, sizeof(jmp_lvo), &insn) != 0)
+        return 1;
+    if (insn.kind != AMIHEUR_M68K_JMP || insn.length != 4U)
+        return 1;
+    if (!insn.is_a6_lvo || insn.lvo_offset != -96)
+        return 1;
+
+    if (amiheur_m68k_decode(jsr_a0, sizeof(jsr_a0), &insn) != 0)
+        return 1;
+    if (insn.is_a6_lvo || insn.lvo_offset != 0)
+        return 1;
+
+    return 0;
+}
+
 int main(void)
 {
     static const unsigned char bra_short[] = { 0x60U, 0x02U };
@@ -38,7 +67,9 @@ int main(void)
         return 1;
     if (expect_kind(other, sizeof(other), AMIHEUR_M68K_OTHER, 2U) != 0)
         return 1;
+    if (test_lvo() != 0)
+        return 1;
 
-    puts("PASS: minimal 68000 decoder");
+    puts("PASS: minimal 68000 decoder and A6 LVO semantics");
     return 0;
 }
