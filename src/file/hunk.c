@@ -12,6 +12,21 @@
 #define HUNK_RELOC8 0x3eeUL
 #define HUNK_END 0x3f2UL
 
+static unsigned int be16(const unsigned char *p)
+{
+    return ((unsigned int)p[0] << 8) | (unsigned int)p[1];
+}
+
+static int s8(unsigned int value)
+{
+    return (value & 0x80U) != 0U ? (int)value - 256 : (int)value;
+}
+
+static int s16(unsigned int value)
+{
+    return (value & 0x8000U) != 0U ? (int)value - 65536 : (int)value;
+}
+
 static unsigned long be32(const unsigned char *p)
 {
     return ((unsigned long)p[0] << 24) | ((unsigned long)p[1] << 16) |
@@ -69,6 +84,60 @@ static int has_execbase_a6_load(const unsigned char *data, size_t size)
     return 0;
 }
 
+static int branch_is_backward(const unsigned char *data, size_t size, size_t i)
+{
+    unsigned int op;
+    unsigned int d8;
+
+    if (i + 1U >= size)
+        return 0;
+    op = be16(data + i);
+    if ((op & 0xf000U) != 0x6000U)
+        return 0;
+    d8 = op & 0x00ffU;
+    if (d8 != 0U)
+        return s8(d8) < 0;
+    if (i + 3U >= size)
+        return 0;
+    return s16(be16(data + i + 2U)) < 0;
+}
+
+static int has_jmp(const unsigned char *data, size_t size)
+{
+    size_t i;
+    AmiHeurM68kInsn insn;
+
+    for (i = 0U; i + 1U < size; i += 2U)
+        if (amiheur_m68k_decode(data + i, size - i, &insn) == 0 &&
+            insn.kind == AMIHEUR_M68K_JMP)
+            return 1;
+    return 0;
+}
+
+static void inspect_transform_loops(const unsigned char *data, size_t size,
+                                    AmiHeurHunkReport *report)
+{
+    size_t i;
+    size_t j;
+    unsigned int op;
+
+    for (i = 0U; i + 3U < size; i += 2U) {
+        op = be16(data + i);
+        /* EORI #imm,<ea>. Common in tiny XOR-style decode loops, but benign too. */
+        if ((op & 0xff00U) != 0x0a00U)
+            continue;
+        for (j = i + 4U; j < size && j <= i + 18U; j += 2U) {
+            if (branch_is_backward(data, size, j)) {
+                report->has_transform_loop = 1;
+                ++report->transform_loop_count;
+                break;
+            }
+        }
+    }
+    if (report->has_transform_loop && has_jmp(data, size))
+        report->has_transform_transfer = 1;
+}
+
 static void inspect_code(const unsigned char *data, size_t size,
                          AmiHeurHunkReport *report)
 {
@@ -80,6 +149,8 @@ static void inspect_code(const unsigned char *data, size_t size,
     execbase_known = has_execbase_a6_load(data, size);
     if (execbase_known)
         report->has_execbase_a6_load = 1;
+
+    inspect_transform_loops(data, size, report);
 
     for (i = 0U; i + 1U < size; i += 2U) {
         if (amiheur_m68k_decode(data + i, size - i, &insn) != 0)
@@ -212,5 +283,11 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
         finding(report, "HUNK.EXEC_MUTATION_LVO", 20);
     if (report->has_exec_control_lvo && report->has_exec_mutation_lvo)
         finding(report, "HUNK.CORR_EXEC_CONTROL_MUTATION", 10);
+    if (report->has_transform_loop)
+        finding(report, "HUNK.TRANSFORM_LOOP", 10);
+    if (report->has_transform_transfer)
+        finding(report, "HUNK.CORR_TRANSFORM_TRANSFER", 10);
+    if (report->has_transform_loop && report->has_exec_mutation_lvo)
+        finding(report, "HUNK.CORR_TRANSFORM_EXEC_MUTATION", 10);
     return 0;
 }
