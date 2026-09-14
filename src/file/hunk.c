@@ -1,5 +1,6 @@
 #include "amiheuristics/hunk.h"
 #include "amiheuristics/m68k.h"
+#include "amiheuristics/exec_lvo.h"
 #include <string.h>
 
 #define HUNK_HEADER 0x3f3UL
@@ -49,16 +50,30 @@ static void finding(AmiHeurHunkReport *r, const char *id, int weight)
     r->score += weight;
 }
 
-static int inspect_code(const unsigned char *data, size_t size)
+static void inspect_code(const unsigned char *data, size_t size,
+                         AmiHeurHunkReport *report)
 {
     size_t i;
     AmiHeurM68kInsn insn;
+    AmiHeurExecLvoInfo info;
+
     for (i = 0U; i + 1U < size; i += 2U) {
-        if (amiheur_m68k_decode(data + i, size - i, &insn) == 0 &&
-            insn.is_a6_lvo && insn.lvo_offset < 0)
-            return 1;
+        if (amiheur_m68k_decode(data + i, size - i, &insn) != 0)
+            continue;
+        if (!insn.is_a6_lvo || insn.lvo_offset >= 0)
+            continue;
+
+        report->has_a6_lvo_call = 1;
+        if (amiheur_exec_lvo_lookup(insn.lvo_offset, &info) != 0)
+            continue;
+        if (info.classification == AMIHEUR_EXEC_LVO_CONTROL) {
+            report->has_exec_control_lvo = 1;
+            ++report->exec_control_lvo_count;
+        } else if (info.classification == AMIHEUR_EXEC_LVO_MUTATION) {
+            report->has_exec_mutation_lvo = 1;
+            ++report->exec_mutation_lvo_count;
+        }
     }
-    return 0;
 }
 
 static int skip_reloc(const unsigned char *data, size_t size, size_t *pos)
@@ -130,8 +145,7 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
             if (word == HUNK_CODE) {
                 report->has_code = 1;
                 report->code_bytes += words * 4UL;
-                if (inspect_code(data + pos, (size_t)words * 4U))
-                    report->has_a6_lvo_call = 1;
+                inspect_code(data + pos, (size_t)words * 4U, report);
             } else if (word == HUNK_DATA) {
                 report->has_data = 1;
                 report->data_bytes += words * 4UL;
@@ -164,5 +178,11 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
         finding(report, "HUNK.RELOCATIONS", 0);
     if (report->has_a6_lvo_call)
         finding(report, "HUNK.A6_LVO_CALL", 10);
+    if (report->has_exec_control_lvo)
+        finding(report, "HUNK.EXEC_CONTROL_LVO", 5);
+    if (report->has_exec_mutation_lvo)
+        finding(report, "HUNK.EXEC_MUTATION_LVO", 20);
+    if (report->has_exec_control_lvo && report->has_exec_mutation_lvo)
+        finding(report, "HUNK.CORR_EXEC_CONTROL_MUTATION", 10);
     return 0;
 }
