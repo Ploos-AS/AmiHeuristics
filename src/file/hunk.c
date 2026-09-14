@@ -116,6 +116,7 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
     for (i = 0UL; i < count; ++i)
         if (get32(data, size, &pos, &words) != 0)
             return 0;
+    report->hunk_count = count;
     segs = 0UL;
     while (pos < size && segs < count) {
         if (get32(data, size, &pos, &word) != 0)
