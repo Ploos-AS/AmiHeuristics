@@ -1,4 +1,5 @@
 #include "amiheuristics/bootblock.h"
+#include "amiheuristics/m68k.h"
 #include <limits.h>
 #include <string.h>
 
@@ -11,11 +12,6 @@ static unsigned long read_be32(const unsigned char *p)
             ((unsigned long)p[1] << 16) |
             ((unsigned long)p[2] << 8) |
             (unsigned long)p[3]) & AMIHEUR_U32_MASK;
-}
-
-static unsigned int read_be16(const unsigned char *p)
-{
-    return ((unsigned int)p[0] << 8) | (unsigned int)p[1];
 }
 
 static unsigned long add_u32_carry(unsigned long sum, unsigned long value)
@@ -79,14 +75,18 @@ static int code_present(const unsigned char *data)
     return 0;
 }
 
-static int has_branch_opcode(const unsigned char *data)
+static int has_decoded_kind(const unsigned char *data, AmiHeurM68kKind kind)
 {
     unsigned int i;
-    unsigned int word;
+    AmiHeurM68kInsn insn;
 
-    for (i = AMIHEUR_BOOT_CODE_OFFSET; i + 1U < AMIHEUR_BOOTBLOCK_SIZE; i += 2U) {
-        word = read_be16(data + i);
-        if ((word & 0xf000U) == 0x6000U)
+    for (i = AMIHEUR_BOOT_CODE_OFFSET;
+         i + 1U < AMIHEUR_BOOTBLOCK_SIZE;
+         i += 2U) {
+        if (amiheur_m68k_decode(data + i,
+                               AMIHEUR_BOOTBLOCK_SIZE - i,
+                               &insn) == 0 &&
+            insn.kind == kind)
             return 1;
     }
     return 0;
@@ -141,8 +141,17 @@ int amiheur_boot_analyze(const unsigned char *data,
     if (code_present(data))
         add_finding(report, "BOOT.CODE_PRESENT", 0);
 
-    if (has_branch_opcode(data))
+    if (has_decoded_kind(data, AMIHEUR_M68K_BRANCH))
         add_finding(report, "BOOT.BRANCH_OPCODE", 5);
+
+    if (has_decoded_kind(data, AMIHEUR_M68K_JSR))
+        add_finding(report, "BOOT.JSR_OPCODE", 5);
+
+    if (has_decoded_kind(data, AMIHEUR_M68K_JMP))
+        add_finding(report, "BOOT.JMP_OPCODE", 5);
+
+    if (has_decoded_kind(data, AMIHEUR_M68K_RTS))
+        add_finding(report, "BOOT.RTS_OPCODE", 0);
 
     if (has_execbase_reference(data))
         add_finding(report, "BOOT.EXECBASE_REFERENCE", 5);
