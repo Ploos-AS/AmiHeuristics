@@ -57,17 +57,39 @@ static unsigned long checksum(const unsigned char *data)
     return (~sum) & TEST_U32_MASK;
 }
 
+static int has_finding(const AmiHeurBootReport *report, const char *id)
+{
+    unsigned long i;
+
+    for (i = 0UL; i < report->finding_count && i < AMIHEUR_BOOT_MAX_FINDINGS; ++i) {
+        if (strcmp(report->finding_ids[i], id) == 0)
+            return 1;
+    }
+    return 0;
+}
+
+static void make_dos_block(unsigned char *block)
+{
+    memset(block, 0, AMIHEUR_BOOTBLOCK_SIZE);
+    block[0] = 'D';
+    block[1] = 'O';
+    block[2] = 'S';
+    block[3] = 0;
+}
+
+static void seal_checksum(unsigned char *block)
+{
+    write_be32(block + 4U, 0UL);
+    write_be32(block + 4U, checksum(block));
+}
+
 static int test_valid(void)
 {
     unsigned char block[AMIHEUR_BOOTBLOCK_SIZE];
     AmiHeurBootReport report;
 
-    memset(block, 0, sizeof(block));
-    block[0] = 'D';
-    block[1] = 'O';
-    block[2] = 'S';
-    block[3] = 0;
-    write_be32(block + 4U, checksum(block));
+    make_dos_block(block);
+    seal_checksum(block);
 
     if (amiheur_boot_analyze(block, sizeof(block), &report) != 0)
         return 1;
@@ -93,6 +115,42 @@ static int test_invalid(void)
     return 0;
 }
 
+static int test_code_heuristics(void)
+{
+    unsigned char block[AMIHEUR_BOOTBLOCK_SIZE];
+    AmiHeurBootReport report;
+
+    make_dos_block(block);
+
+    block[12] = 0x60U;
+    block[13] = 0x02U;
+    block[14] = 0x4eU;
+    block[15] = 0x71U;
+    write_be32(block + 16U, 4UL);
+    write_be32(block + 20U, 0x00dff180UL);
+    block[24] = 0x12U;
+    block[25] = 0x34U;
+    block[26] = 0x56U;
+    block[27] = 0x78U;
+    seal_checksum(block);
+
+    if (amiheur_boot_analyze(block, sizeof(block), &report) != 0)
+        return 1;
+    if (!report.checksum_valid)
+        return 1;
+    if (!has_finding(&report, "BOOT.CODE_PRESENT"))
+        return 1;
+    if (!has_finding(&report, "BOOT.BRANCH_OPCODE"))
+        return 1;
+    if (!has_finding(&report, "BOOT.EXECBASE_REFERENCE"))
+        return 1;
+    if (!has_finding(&report, "BOOT.CUSTOM_CHIP_REFERENCE"))
+        return 1;
+    if (report.score != 20 || report.finding_count != 4UL)
+        return 1;
+    return 0;
+}
+
 int main(void)
 {
     if (test_valid() != 0) {
@@ -103,6 +161,10 @@ int main(void)
         puts("FAIL: invalid bootblock");
         return 1;
     }
-    puts("PASS: bootblock validation");
+    if (test_code_heuristics() != 0) {
+        puts("FAIL: bootblock code heuristics");
+        return 1;
+    }
+    puts("PASS: bootblock validation and heuristics");
     return 0;
 }
