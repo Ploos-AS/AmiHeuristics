@@ -16,6 +16,10 @@ typedef struct AmiHeurHunkReport {
     int has_data;
     int has_bss;
     int has_a6_lvo_call;
+    int has_exec_control_lvo;
+    int has_exec_mutation_lvo;
+    unsigned long exec_control_lvo_count;
+    unsigned long exec_mutation_lvo_count;
     int score;
     unsigned long finding_count;
     const char *finding_ids[AMIHEUR_HUNK_MAX_FINDINGS];
