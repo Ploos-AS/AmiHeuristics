@@ -1,4 +1,5 @@
 #include "amiheuristics/bootblock.h"
+#include "amiheuristics/exec_lvo.h"
 #include "amiheuristics/m68k.h"
 #include <limits.h>
 #include <string.h>
@@ -110,6 +111,28 @@ static int has_a6_lvo_call(const unsigned char *data)
     return 0;
 }
 
+static int has_exec_lvo_class(const unsigned char *data,
+                              AmiHeurExecLvoClass classification)
+{
+    unsigned int i;
+    AmiHeurM68kInsn insn;
+    AmiHeurExecLvoInfo info;
+
+    for (i = AMIHEUR_BOOT_CODE_OFFSET;
+         i + 1U < AMIHEUR_BOOTBLOCK_SIZE;
+         i += 2U) {
+        if (amiheur_m68k_decode(data + i,
+                               AMIHEUR_BOOTBLOCK_SIZE - i,
+                               &insn) == 0 &&
+            insn.is_a6_lvo &&
+            insn.lvo_offset < 0 &&
+            amiheur_exec_lvo_lookup(insn.lvo_offset, &info) == 1 &&
+            info.classification == classification)
+            return 1;
+    }
+    return 0;
+}
+
 static int has_execbase_reference(const unsigned char *data)
 {
     unsigned int i;
@@ -173,6 +196,12 @@ int amiheur_boot_analyze(const unsigned char *data,
 
     if (has_a6_lvo_call(data))
         add_finding(report, "BOOT.A6_LVO_CALL", 10);
+
+    if (has_exec_lvo_class(data, AMIHEUR_EXEC_LVO_CONTROL))
+        add_finding(report, "BOOT.EXEC_CONTROL_LVO", 5);
+
+    if (has_exec_lvo_class(data, AMIHEUR_EXEC_LVO_MUTATION))
+        add_finding(report, "BOOT.EXEC_MUTATION_LVO", 20);
 
     if (has_execbase_reference(data))
         add_finding(report, "BOOT.EXECBASE_REFERENCE", 5);
