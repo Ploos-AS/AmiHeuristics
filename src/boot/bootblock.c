@@ -92,6 +92,24 @@ static int has_decoded_kind(const unsigned char *data, AmiHeurM68kKind kind)
     return 0;
 }
 
+static int has_a6_lvo_call(const unsigned char *data)
+{
+    unsigned int i;
+    AmiHeurM68kInsn insn;
+
+    for (i = AMIHEUR_BOOT_CODE_OFFSET;
+         i + 1U < AMIHEUR_BOOTBLOCK_SIZE;
+         i += 2U) {
+        if (amiheur_m68k_decode(data + i,
+                               AMIHEUR_BOOTBLOCK_SIZE - i,
+                               &insn) == 0 &&
+            insn.is_a6_lvo &&
+            insn.lvo_offset < 0)
+            return 1;
+    }
+    return 0;
+}
+
 static int has_execbase_reference(const unsigned char *data)
 {
     unsigned int i;
@@ -152,6 +170,9 @@ int amiheur_boot_analyze(const unsigned char *data,
 
     if (has_decoded_kind(data, AMIHEUR_M68K_RTS))
         add_finding(report, "BOOT.RTS_OPCODE", 0);
+
+    if (has_a6_lvo_call(data))
+        add_finding(report, "BOOT.A6_LVO_CALL", 10);
 
     if (has_execbase_reference(data))
         add_finding(report, "BOOT.EXECBASE_REFERENCE", 5);
