@@ -9,11 +9,7 @@
 #define HUNK_RELOC32 0x3ecUL
 #define HUNK_RELOC16 0x3edUL
 #define HUNK_RELOC8 0x3eeUL
-#define HUNK_EXT 0x3efUL
-#define HUNK_SYMBOL 0x3f0UL
-#define HUNK_DEBUG 0x3f1UL
 #define HUNK_END 0x3f2UL
-#define HUNK_NAME 0x3e8UL
 
 static unsigned long be32(const unsigned char *p)
 {
@@ -77,7 +73,6 @@ static int skip_reloc(const unsigned char *data, size_t size, size_t *pos)
             return 0;
         if (get32(data, size, pos, &target) != 0)
             return -1;
-        (void)target;
         for (i = 0UL; i < count; ++i)
             if (get32(data, size, pos, &target) != 0)
                 return -1;
@@ -99,7 +94,7 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
     if (data == 0 || report == 0)
         return -1;
     memset(report, 0, sizeof(*report));
-    if (size < 16U || get32(data, size, &(size_t){0}, &word) != 0)
+    if (size < 16U)
         return -1;
     pos = 0U;
     if (get32(data, size, &pos, &word) != 0 || word != HUNK_HEADER)
@@ -118,10 +113,9 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
         return 0;
     if (count == 0UL || last < first || last - first + 1UL != count || count > 1024UL)
         return 0;
-    for (i = 0UL; i < count; ++i) {
+    for (i = 0UL; i < count; ++i)
         if (get32(data, size, &pos, &words) != 0)
             return 0;
-    }
     report->valid = 1;
     report->hunk_count = count;
     finding(report, "HUNK.VALID_HEADER", 0);
