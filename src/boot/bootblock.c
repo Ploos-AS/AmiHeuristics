@@ -3,6 +3,7 @@
 #include <string.h>
 
 #define AMIHEUR_U32_MASK 0xffffffffUL
+#define AMIHEUR_BOOT_CODE_OFFSET 12U
 
 static unsigned long read_be32(const unsigned char *p)
 {
@@ -10,6 +11,11 @@ static unsigned long read_be32(const unsigned char *p)
             ((unsigned long)p[1] << 16) |
             ((unsigned long)p[2] << 8) |
             (unsigned long)p[3]) & AMIHEUR_U32_MASK;
+}
+
+static unsigned int read_be16(const unsigned char *p)
+{
+    return ((unsigned int)p[0] << 8) | (unsigned int)p[1];
 }
 
 static unsigned long add_u32_carry(unsigned long sum, unsigned long value)
@@ -57,6 +63,59 @@ static void add_finding(AmiHeurBootReport *report,
     report->score += weight;
 }
 
+static int code_present(const unsigned char *data)
+{
+    unsigned int i;
+    unsigned int nonzero;
+
+    nonzero = 0U;
+    for (i = AMIHEUR_BOOT_CODE_OFFSET; i < AMIHEUR_BOOTBLOCK_SIZE; ++i) {
+        if (data[i] != 0U && data[i] != 0xffU) {
+            ++nonzero;
+            if (nonzero >= 8U)
+                return 1;
+        }
+    }
+    return 0;
+}
+
+static int has_branch_opcode(const unsigned char *data)
+{
+    unsigned int i;
+    unsigned int word;
+
+    for (i = AMIHEUR_BOOT_CODE_OFFSET; i + 1U < AMIHEUR_BOOTBLOCK_SIZE; i += 2U) {
+        word = read_be16(data + i);
+        if ((word & 0xf000U) == 0x6000U)
+            return 1;
+    }
+    return 0;
+}
+
+static int has_execbase_reference(const unsigned char *data)
+{
+    unsigned int i;
+
+    for (i = AMIHEUR_BOOT_CODE_OFFSET; i + 3U < AMIHEUR_BOOTBLOCK_SIZE; i += 2U) {
+        if (read_be32(data + i) == 4UL)
+            return 1;
+    }
+    return 0;
+}
+
+static int has_custom_chip_reference(const unsigned char *data)
+{
+    unsigned int i;
+    unsigned long value;
+
+    for (i = AMIHEUR_BOOT_CODE_OFFSET; i + 3U < AMIHEUR_BOOTBLOCK_SIZE; i += 2U) {
+        value = read_be32(data + i);
+        if (value >= 0x00dff000UL && value <= 0x00dfffffUL)
+            return 1;
+    }
+    return 0;
+}
+
 int amiheur_boot_analyze(const unsigned char *data,
                          size_t size,
                          AmiHeurBootReport *report)
@@ -78,6 +137,18 @@ int amiheur_boot_analyze(const unsigned char *data,
 
     if (!report->checksum_valid)
         add_finding(report, "BOOT.BAD_CHECKSUM", 15);
+
+    if (code_present(data))
+        add_finding(report, "BOOT.CODE_PRESENT", 0);
+
+    if (has_branch_opcode(data))
+        add_finding(report, "BOOT.BRANCH_OPCODE", 5);
+
+    if (has_execbase_reference(data))
+        add_finding(report, "BOOT.EXECBASE_REFERENCE", 5);
+
+    if (has_custom_chip_reference(data))
+        add_finding(report, "BOOT.CUSTOM_CHIP_REFERENCE", 10);
 
     return 0;
 }
