@@ -116,9 +116,6 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
     for (i = 0UL; i < count; ++i)
         if (get32(data, size, &pos, &words) != 0)
             return 0;
-    report->valid = 1;
-    report->hunk_count = count;
-    finding(report, "HUNK.VALID_HEADER", 0);
     segs = 0UL;
     while (pos < size && segs < count) {
         if (get32(data, size, &pos, &word) != 0)
@@ -154,6 +151,8 @@ int amiheur_hunk_analyze(const unsigned char *data, size_t size,
     }
     if (segs != count)
         return 0;
+    report->valid = 1;
+    finding(report, "HUNK.VALID_HEADER", 0);
     if (report->has_code)
         finding(report, "HUNK.CODE", 0);
     if (report->has_data)
