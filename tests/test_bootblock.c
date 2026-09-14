@@ -83,6 +83,17 @@ static void seal_checksum(unsigned char *block)
     write_be32(block + 4U, checksum(block));
 }
 
+static void put_jsr_a6(unsigned char *p, int offset)
+{
+    unsigned int word;
+
+    word = (unsigned int)(offset & 0xffff);
+    p[0] = 0x4eU;
+    p[1] = 0xaeU;
+    p[2] = (unsigned char)((word >> 8) & 0xffU);
+    p[3] = (unsigned char)(word & 0xffU);
+}
+
 static int test_valid(void)
 {
     unsigned char block[AMIHEUR_BOOTBLOCK_SIZE];
@@ -157,10 +168,7 @@ static int test_lvo_heuristic(void)
     AmiHeurBootReport report;
 
     make_dos_block(block);
-    block[12] = 0x4eU;
-    block[13] = 0xaeU;
-    block[14] = 0xffU;
-    block[15] = 0xc4U;
+    put_jsr_a6(block + 12U, -60);
     block[16] = 0x4eU;
     block[17] = 0x75U;
     block[18] = 0x12U;
@@ -179,7 +187,63 @@ static int test_lvo_heuristic(void)
         return 1;
     if (!has_finding(&report, "BOOT.RTS_OPCODE"))
         return 1;
+    if (has_finding(&report, "BOOT.EXEC_MUTATION_LVO"))
+        return 1;
     if (report.score != 15)
+        return 1;
+    return 0;
+}
+
+static int test_exec_mutation_lvo(void)
+{
+    unsigned char block[AMIHEUR_BOOTBLOCK_SIZE];
+    AmiHeurBootReport report;
+
+    make_dos_block(block);
+    put_jsr_a6(block + 12U, -420);
+    block[16] = 0x4eU;
+    block[17] = 0x75U;
+    block[18] = 0x12U;
+    block[19] = 0x34U;
+    block[20] = 0x56U;
+    block[21] = 0x78U;
+    seal_checksum(block);
+
+    if (amiheur_boot_analyze(block, sizeof(block), &report) != 0)
+        return 1;
+    if (!has_finding(&report, "BOOT.A6_LVO_CALL"))
+        return 1;
+    if (!has_finding(&report, "BOOT.EXEC_MUTATION_LVO"))
+        return 1;
+    if (has_finding(&report, "BOOT.EXEC_CONTROL_LVO"))
+        return 1;
+    if (report.score != 35)
+        return 1;
+    return 0;
+}
+
+static int test_exec_control_lvo(void)
+{
+    unsigned char block[AMIHEUR_BOOTBLOCK_SIZE];
+    AmiHeurBootReport report;
+
+    make_dos_block(block);
+    put_jsr_a6(block + 12U, -132);
+    block[16] = 0x4eU;
+    block[17] = 0x75U;
+    block[18] = 0x12U;
+    block[19] = 0x34U;
+    block[20] = 0x56U;
+    block[21] = 0x78U;
+    seal_checksum(block);
+
+    if (amiheur_boot_analyze(block, sizeof(block), &report) != 0)
+        return 1;
+    if (!has_finding(&report, "BOOT.EXEC_CONTROL_LVO"))
+        return 1;
+    if (has_finding(&report, "BOOT.EXEC_MUTATION_LVO"))
+        return 1;
+    if (report.score != 20)
         return 1;
     return 0;
 }
@@ -202,6 +266,14 @@ int main(void)
         puts("FAIL: bootblock A6 LVO heuristic");
         return 1;
     }
-    puts("PASS: bootblock validation, heuristics, and A6 LVO semantics");
+    if (test_exec_mutation_lvo() != 0) {
+        puts("FAIL: Exec mutation LVO heuristic");
+        return 1;
+    }
+    if (test_exec_control_lvo() != 0) {
+        puts("FAIL: Exec control LVO heuristic");
+        return 1;
+    }
+    puts("PASS: bootblock validation and Exec LVO semantics");
     return 0;
 }
