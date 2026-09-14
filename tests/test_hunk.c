@@ -19,7 +19,7 @@ static int finding(const AmiHeurHunkReport *r, const char *id)
     return 0;
 }
 
-static size_t make_simple(unsigned char *b)
+static size_t hunk_prefix(unsigned char *b, unsigned long code_words)
 {
     size_t p = 0U;
     put32(b + p, 0x3f3UL); p += 4U;
@@ -27,9 +27,15 @@ static size_t make_simple(unsigned char *b)
     put32(b + p, 1UL); p += 4U;
     put32(b + p, 0UL); p += 4U;
     put32(b + p, 0UL); p += 4U;
-    put32(b + p, 2UL); p += 4U;
+    put32(b + p, code_words); p += 4U;
     put32(b + p, 0x3e9UL); p += 4U;
-    put32(b + p, 2UL); p += 4U;
+    put32(b + p, code_words); p += 4U;
+    return p;
+}
+
+static size_t make_simple(unsigned char *b)
+{
+    size_t p = hunk_prefix(b, 2UL);
     b[p++] = 0x2cU; b[p++] = 0x78U; b[p++] = 0x00U; b[p++] = 0x04U;
     b[p++] = 0x4eU; b[p++] = 0xaeU; b[p++] = 0xfeU; b[p++] = 0x5cU;
     put32(b + p, 0x3f2UL); p += 4U;
@@ -38,15 +44,7 @@ static size_t make_simple(unsigned char *b)
 
 static size_t make_control_mutation(unsigned char *b)
 {
-    size_t p = 0U;
-    put32(b + p, 0x3f3UL); p += 4U;
-    put32(b + p, 0UL); p += 4U;
-    put32(b + p, 1UL); p += 4U;
-    put32(b + p, 0UL); p += 4U;
-    put32(b + p, 0UL); p += 4U;
-    put32(b + p, 3UL); p += 4U;
-    put32(b + p, 0x3e9UL); p += 4U;
-    put32(b + p, 3UL); p += 4U;
+    size_t p = hunk_prefix(b, 3UL);
     b[p++] = 0x2cU; b[p++] = 0x78U; b[p++] = 0x00U; b[p++] = 0x04U;
     b[p++] = 0x4eU; b[p++] = 0xaeU; b[p++] = 0xffU; b[p++] = 0x7cU;
     b[p++] = 0x4eU; b[p++] = 0xaeU; b[p++] = 0xfeU; b[p++] = 0x5cU;
@@ -56,16 +54,23 @@ static size_t make_control_mutation(unsigned char *b)
 
 static size_t make_unproven_a6(unsigned char *b)
 {
-    size_t p = 0U;
-    put32(b + p, 0x3f3UL); p += 4U;
-    put32(b + p, 0UL); p += 4U;
-    put32(b + p, 1UL); p += 4U;
-    put32(b + p, 0UL); p += 4U;
-    put32(b + p, 0UL); p += 4U;
-    put32(b + p, 1UL); p += 4U;
-    put32(b + p, 0x3e9UL); p += 4U;
-    put32(b + p, 1UL); p += 4U;
+    size_t p = hunk_prefix(b, 1UL);
     b[p++] = 0x4eU; b[p++] = 0xaeU; b[p++] = 0xfeU; b[p++] = 0x5cU;
+    put32(b + p, 0x3f2UL); p += 4U;
+    return p;
+}
+
+static size_t make_transform_loop(unsigned char *b, int with_jmp)
+{
+    size_t p = hunk_prefix(b, 2UL);
+    /* EORI.B #$55,(A0)+ ; BRA.S -6 ; optional JMP (A0). */
+    b[p++] = 0x0aU; b[p++] = 0x18U; b[p++] = 0x00U; b[p++] = 0x55U;
+    b[p++] = 0x60U; b[p++] = 0xfaU;
+    if (with_jmp) {
+        b[p++] = 0x4eU; b[p++] = 0xd0U;
+    } else {
+        b[p++] = 0x4eU; b[p++] = 0x71U;
+    }
     put32(b + p, 0x3f2UL); p += 4U;
     return p;
 }
@@ -131,6 +136,39 @@ static int test_unproven_a6(void)
     return r.score != 10;
 }
 
+static int test_transform_loop(void)
+{
+    unsigned char b[128];
+    AmiHeurHunkReport r;
+    size_t n;
+    n = make_transform_loop(b, 0);
+    if (amiheur_hunk_analyze(b, n, &r) != 0 || !r.valid)
+        return 1;
+    if (!r.has_transform_loop || r.transform_loop_count != 1UL)
+        return 1;
+    if (r.has_transform_transfer)
+        return 1;
+    if (!finding(&r, "HUNK.TRANSFORM_LOOP"))
+        return 1;
+    return r.score != 10;
+}
+
+static int test_transform_transfer(void)
+{
+    unsigned char b[128];
+    AmiHeurHunkReport r;
+    size_t n;
+    n = make_transform_loop(b, 1);
+    if (amiheur_hunk_analyze(b, n, &r) != 0 || !r.valid)
+        return 1;
+    if (!r.has_transform_loop || !r.has_transform_transfer)
+        return 1;
+    if (!finding(&r, "HUNK.TRANSFORM_LOOP") ||
+        !finding(&r, "HUNK.CORR_TRANSFORM_TRANSFER"))
+        return 1;
+    return r.score != 20;
+}
+
 static int test_truncated(void)
 {
     unsigned char b[128];
@@ -159,8 +197,10 @@ int main(void)
     if (test_valid() != 0) { puts("FAIL: valid HUNK"); return 1; }
     if (test_control_mutation() != 0) { puts("FAIL: Exec semantic HUNK"); return 1; }
     if (test_unproven_a6() != 0) { puts("FAIL: A6 provenance guard"); return 1; }
+    if (test_transform_loop() != 0) { puts("FAIL: transform loop"); return 1; }
+    if (test_transform_transfer() != 0) { puts("FAIL: transform transfer"); return 1; }
     if (test_truncated() != 0) { puts("FAIL: truncated HUNK"); return 1; }
     if (test_bad_magic() != 0) { puts("FAIL: bad HUNK magic"); return 1; }
-    puts("PASS: HUNK parser, Exec semantics, and A6 provenance");
+    puts("PASS: HUNK parser, Exec provenance, and transform heuristics");
     return 0;
 }
