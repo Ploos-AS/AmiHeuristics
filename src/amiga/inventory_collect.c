@@ -11,10 +11,11 @@ int amiheur_amiga_inventory_collect_views(const AmiHeurAmigaNodeView *nodes,
 
     amiheur_inventory_init(inventory);
     for (i = 0U; i < node_count; ++i) {
-        if (nodes[i].name == NULL || nodes[i].address == 0UL) return -1;
+        if (nodes[i].name == NULL || nodes[i].start == 0UL ||
+            nodes[i].start > nodes[i].end) return -1;
         if (amiheur_inventory_add(inventory, nodes[i].kind, nodes[i].name,
-                                  nodes[i].address, nodes[i].address,
-                                  1, 0) != 0)
+                                  nodes[i].start, nodes[i].end,
+                                  nodes[i].executable, 0) != 0)
             return -2;
     }
     return 0;
