@@ -18,11 +18,9 @@ int amiheur_vector_pipeline(const AmiHeurVectorSlot *slots,
                             size_t capacity,
                             size_t *required_count);
 
-/* As above, but obtains fingerprint bytes from a bounded caller-supplied
- * memory view. Bytes are used only when target_code_read proves the complete
- * fingerprint lies in a known executable inventory region and the memory
- * view. Unsafe/uncovered targets remain analyzable but cannot be allowlisted.
- */
+/* Fingerprint bytes require two independent facts: allocation/owner
+ * provenance from inventory, and explicit confirmed executable coverage from
+ * code_regions. Library allocation bounds alone never authorize code reads. */
 int amiheur_vector_pipeline_with_memory(const AmiHeurVectorSlot *slots,
                             const char *const *names,
                             const unsigned long *expected_starts,
@@ -31,6 +29,8 @@ int amiheur_vector_pipeline_with_memory(const AmiHeurVectorSlot *slots,
                             const AmiHeurInventory *inventory,
                             const AmiHeurPatchRule *rules,
                             size_t rule_count,
+                            const AmiHeurCodeRegion *code_regions,
+                            size_t code_region_count,
                             const unsigned char *memory,
                             unsigned long memory_start,
                             size_t memory_size,
