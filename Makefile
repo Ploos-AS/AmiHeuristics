@@ -12,10 +12,11 @@ TEST_HUNK_BENIGN := $(BUILD_DIR)/test_hunk_benign
 TEST_MEMORY := $(BUILD_DIR)/test_memory
 TEST_INVENTORY := $(BUILD_DIR)/test_inventory
 TEST_SNAPSHOT := $(BUILD_DIR)/test_snapshot
+TEST_AMIGA_INVENTORY := $(BUILD_DIR)/test_amiga_inventory
 
 .PHONY: all check clean
 
-all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT)
+all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -47,7 +48,10 @@ $(TEST_INVENTORY): tests/test_inventory.c src/memory/inventory.c src/memory/vect
 $(TEST_SNAPSHOT): tests/test_snapshot.c src/memory/snapshot.c include/amiheuristics/snapshot.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_snapshot.c src/memory/snapshot.c
 
-check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT)
+$(TEST_AMIGA_INVENTORY): tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c include/amiheuristics/amiga_inventory.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c
+
+check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY)
 	./$(TEST_SCORE)
 	./$(TEST_BOOT)
 	./$(TEST_M68K)
@@ -57,6 +61,7 @@ check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(T
 	./$(TEST_MEMORY)
 	./$(TEST_INVENTORY)
 	./$(TEST_SNAPSHOT)
+	./$(TEST_AMIGA_INVENTORY)
 	python3 tools/check_m0.py
 
 clean:
