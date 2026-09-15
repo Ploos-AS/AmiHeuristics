@@ -7,21 +7,22 @@
 typedef struct AmiHeurAmigaNodeView {
     AmiHeurInventoryKind kind;
     const char *name;
-    unsigned long address;
+    unsigned long start;
+    unsigned long end;
+    int executable;
 } AmiHeurAmigaNodeView;
 
-/*
- * Portable collector core used by the native AmigaOS adapter.
- * Nodes are copied into the caller-owned inventory without allocation.
- * Native code supplies stable names and validated addresses while the
- * relevant Exec list is protected.
- */
+/* Portable collector core. A view is an explicitly modelled range; callers
+ * must not present a list-node address as an executable code extent. */
 int amiheur_amiga_inventory_collect_views(const AmiHeurAmigaNodeView *nodes,
                                           size_t node_count,
                                           AmiHeurInventory *inventory);
 
 #ifdef AMIHEURISTICS_AMIGA_NATIVE
-/* Collect Exec residents/tasks/libraries/devices on AmigaOS 2.04+. */
+/* Collect conservative native ranges on AmigaOS 2.04+.
+ * Library/device allocations are represented using their negative/positive
+ * sizes. Task list nodes are intentionally not claimed as executable code.
+ */
 int amiheur_amiga_inventory_collect(AmiHeurInventory *inventory);
 #endif
 
