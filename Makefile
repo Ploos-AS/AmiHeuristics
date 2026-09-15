@@ -14,10 +14,11 @@ TEST_INVENTORY := $(BUILD_DIR)/test_inventory
 TEST_SNAPSHOT := $(BUILD_DIR)/test_snapshot
 TEST_AMIGA_INVENTORY := $(BUILD_DIR)/test_amiga_inventory
 TEST_VECTOR_INSPECT := $(BUILD_DIR)/test_vector_inspect
+TEST_PATCH_ALLOWLIST := $(BUILD_DIR)/test_patch_allowlist
 
 .PHONY: all check clean
 
-all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY) $(TEST_VECTOR_INSPECT)
+all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY) $(TEST_VECTOR_INSPECT) $(TEST_PATCH_ALLOWLIST)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -55,7 +56,10 @@ $(TEST_AMIGA_INVENTORY): tests/test_amiga_inventory.c src/amiga/inventory_collec
 $(TEST_VECTOR_INSPECT): tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c include/amiheuristics/vector_inspect.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c
 
-check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY) $(TEST_VECTOR_INSPECT)
+$(TEST_PATCH_ALLOWLIST): tests/test_patch_allowlist.c src/memory/patch_allowlist.c include/amiheuristics/patch_allowlist.h include/amiheuristics/memory.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_patch_allowlist.c src/memory/patch_allowlist.c
+
+check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY) $(TEST_VECTOR_INSPECT) $(TEST_PATCH_ALLOWLIST)
 	./$(TEST_SCORE)
 	./$(TEST_BOOT)
 	./$(TEST_M68K)
@@ -67,6 +71,7 @@ check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(T
 	./$(TEST_SNAPSHOT)
 	./$(TEST_AMIGA_INVENTORY)
 	./$(TEST_VECTOR_INSPECT)
+	./$(TEST_PATCH_ALLOWLIST)
 	python3 tools/check_m0.py
 
 clean:
