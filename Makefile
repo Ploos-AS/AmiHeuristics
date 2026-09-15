@@ -10,10 +10,11 @@ TEST_EXEC_LVO := $(BUILD_DIR)/test_exec_lvo
 TEST_HUNK := $(BUILD_DIR)/test_hunk
 TEST_HUNK_BENIGN := $(BUILD_DIR)/test_hunk_benign
 TEST_MEMORY := $(BUILD_DIR)/test_memory
+TEST_INVENTORY := $(BUILD_DIR)/test_inventory
 
 .PHONY: all check clean
 
-all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY)
+all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -39,7 +40,10 @@ $(TEST_HUNK_BENIGN): tests/test_hunk_benign.c src/file/hunk.c src/m68k/decode.c 
 $(TEST_MEMORY): tests/test_memory.c src/memory/vector.c include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_memory.c src/memory/vector.c
 
-check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY)
+$(TEST_INVENTORY): tests/test_inventory.c src/memory/inventory.c src/memory/vector.c include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_inventory.c src/memory/inventory.c src/memory/vector.c
+
+check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY)
 	./$(TEST_SCORE)
 	./$(TEST_BOOT)
 	./$(TEST_M68K)
@@ -47,6 +51,7 @@ check: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(T
 	./$(TEST_HUNK)
 	./$(TEST_HUNK_BENIGN)
 	./$(TEST_MEMORY)
+	./$(TEST_INVENTORY)
 	python3 tools/check_m0.py
 
 clean:
