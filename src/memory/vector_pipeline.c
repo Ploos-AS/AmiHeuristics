@@ -76,6 +76,8 @@ int amiheur_vector_pipeline_with_memory(const AmiHeurVectorSlot *slots,
                             const AmiHeurInventory *inventory,
                             const AmiHeurPatchRule *rules,
                             size_t rule_count,
+                            const AmiHeurCodeRegion *code_regions,
+                            size_t code_region_count,
                             const unsigned char *memory,
                             unsigned long memory_start,
                             size_t memory_size,
@@ -90,13 +92,15 @@ int amiheur_vector_pipeline_with_memory(const AmiHeurVectorSlot *slots,
                       vector_count, inventory, capacity, required_count);
     if (rc != 0) return rc;
     if (memory == NULL || memory_size == 0U) return -1;
+    if (code_region_count != 0U && code_regions == NULL) return -1;
     rc = build_specs(slots, names, expected_starts, expected_ends,
                      vector_count, specs);
     if (rc != 0) return rc;
 
     for (i = 0U; i < vector_count; ++i) {
-        rc = amiheur_target_code_read(inventory, specs[i].target,
-                                      memory, memory_start, memory_size,
+        rc = amiheur_target_code_read(code_regions, code_region_count,
+                                      specs[i].target, memory, memory_start,
+                                      memory_size,
                                       AMIHEUR_PATCH_FINGERPRINT_SIZE,
                                       &code[i]);
         if (rc < 0) return -4;
