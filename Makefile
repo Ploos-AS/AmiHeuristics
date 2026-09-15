@@ -13,6 +13,7 @@ TEST_MEMORY := $(BUILD_DIR)/test_memory
 TEST_INVENTORY := $(BUILD_DIR)/test_inventory
 TEST_SNAPSHOT := $(BUILD_DIR)/test_snapshot
 TEST_AMIGA_INVENTORY := $(BUILD_DIR)/test_amiga_inventory
+TEST_AMIGA_CODE_REGIONS := $(BUILD_DIR)/test_amiga_code_regions
 TEST_VECTOR_INSPECT := $(BUILD_DIR)/test_vector_inspect
 TEST_PATCH_ALLOWLIST := $(BUILD_DIR)/test_patch_allowlist
 TEST_VECTOR_READER := $(BUILD_DIR)/test_vector_reader
@@ -20,7 +21,7 @@ TEST_VECTOR_PIPELINE := $(BUILD_DIR)/test_vector_pipeline
 
 .PHONY: all check clean
 
-all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY) $(TEST_VECTOR_INSPECT) $(TEST_PATCH_ALLOWLIST) $(TEST_VECTOR_READER) $(TEST_VECTOR_PIPELINE)
+all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_AMIGA_INVENTORY) $(TEST_AMIGA_CODE_REGIONS) $(TEST_VECTOR_INSPECT) $(TEST_PATCH_ALLOWLIST) $(TEST_VECTOR_READER) $(TEST_VECTOR_PIPELINE)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -55,6 +56,9 @@ $(TEST_SNAPSHOT): tests/test_snapshot.c src/memory/snapshot.c include/amiheurist
 $(TEST_AMIGA_INVENTORY): tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c include/amiheuristics/amiga_inventory.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c
 
+$(TEST_AMIGA_CODE_REGIONS): tests/test_amiga_code_regions.c src/amiga/code_regions.c include/amiheuristics/amiga_code_regions.h include/amiheuristics/target_code.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_amiga_code_regions.c src/amiga/code_regions.c
+
 $(TEST_VECTOR_INSPECT): tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c include/amiheuristics/vector_inspect.h include/amiheuristics/patch_allowlist.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c
 
@@ -78,6 +82,7 @@ check: all
 	./$(TEST_INVENTORY)
 	./$(TEST_SNAPSHOT)
 	./$(TEST_AMIGA_INVENTORY)
+	./$(TEST_AMIGA_CODE_REGIONS)
 	./$(TEST_VECTOR_INSPECT)
 	./$(TEST_PATCH_ALLOWLIST)
 	./$(TEST_VECTOR_READER)
