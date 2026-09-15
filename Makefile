@@ -53,8 +53,8 @@ $(TEST_SNAPSHOT): tests/test_snapshot.c src/memory/snapshot.c include/amiheurist
 $(TEST_AMIGA_INVENTORY): tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c include/amiheuristics/amiga_inventory.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c
 
-$(TEST_VECTOR_INSPECT): tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c include/amiheuristics/vector_inspect.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c
+$(TEST_VECTOR_INSPECT): tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c include/amiheuristics/vector_inspect.h include/amiheuristics/patch_allowlist.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_vector_inspect.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c
 
 $(TEST_PATCH_ALLOWLIST): tests/test_patch_allowlist.c src/memory/patch_allowlist.c include/amiheuristics/patch_allowlist.h include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_patch_allowlist.c src/memory/patch_allowlist.c
