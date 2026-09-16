@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   verify:
-    name: M0 baseline
+    name: Host checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,3 +31,21 @@ jobs:
 
       - name: Build baseline
         run: make
+
+  native-amiga:
+    name: M3.17 native Amiga compile
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile native M3 objects with pinned Bebbo toolchain
+        run: bash ci/build-native-objects.sh build/native
+
+      - name: Upload native compile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3_17-native-amiga
+          path: build/native/
+          if-no-files-found: warn
