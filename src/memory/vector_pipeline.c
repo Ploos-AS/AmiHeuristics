@@ -2,25 +2,20 @@
 
 #define AMIHEUR_PIPELINE_MAX_VECTORS 128U
 
-static int build_specs(const AmiHeurVectorSlot *slots,
-                       const char *const *names,
-                       const unsigned long *expected_starts,
-                       const unsigned long *expected_ends,
-                       size_t vector_count,
-                       AmiHeurVectorSpec *specs)
+static int build_spec(const AmiHeurVectorSlot *slot,
+                      const char *name,
+                      unsigned long expected_start,
+                      unsigned long expected_end,
+                      AmiHeurVectorSpec *spec)
 {
-    size_t i;
-    for (i = 0U; i < vector_count; ++i) {
-        if (names[i] == NULL) return -1;
-        if (slots[i].encoding != AMIHEUR_VECTOR_ENCODING_JMP_ABS_LONG)
-            return -3;
-        specs[i].name = names[i];
-        specs[i].target = slots[i].target;
-        specs[i].expected_start = expected_starts[i];
-        specs[i].expected_end = expected_ends[i];
-        specs[i].target_code = NULL;
-        specs[i].target_code_size = 0U;
-    }
+    if (slot == NULL || name == NULL || spec == NULL) return -1;
+    if (slot->encoding != AMIHEUR_VECTOR_ENCODING_JMP_ABS_LONG) return -3;
+    spec->name = name;
+    spec->target = slot->target;
+    spec->expected_start = expected_start;
+    spec->expected_end = expected_end;
+    spec->target_code = NULL;
+    spec->target_code_size = 0U;
     return 0;
 }
 
@@ -43,6 +38,19 @@ static int validate(const AmiHeurVectorSlot *slots,
     return 0;
 }
 
+static int inspect_one(const AmiHeurVectorSpec *spec,
+                       const AmiHeurInventory *inventory,
+                       const AmiHeurPatchRule *rules,
+                       size_t rule_count,
+                       AmiHeurVectorInspection *result)
+{
+    size_t one_required;
+    return amiheur_vector_inspect_with_allowlist(spec, 1U, inventory,
+                                                  rules, rule_count,
+                                                  result, 1U,
+                                                  &one_required);
+}
+
 int amiheur_vector_pipeline(const AmiHeurVectorSlot *slots,
                             const char *const *names,
                             const unsigned long *expected_starts,
@@ -55,17 +63,21 @@ int amiheur_vector_pipeline(const AmiHeurVectorSlot *slots,
                             size_t capacity,
                             size_t *required_count)
 {
-    AmiHeurVectorSpec specs[AMIHEUR_PIPELINE_MAX_VECTORS];
+    size_t i;
     int rc = validate(slots, names, expected_starts, expected_ends,
                       vector_count, inventory, capacity, required_count);
     if (rc != 0) return rc;
-    rc = build_specs(slots, names, expected_starts, expected_ends,
-                     vector_count, specs);
-    if (rc != 0) return rc;
-    return amiheur_vector_inspect_with_allowlist(specs, vector_count,
-                                                  inventory, rules, rule_count,
-                                                  results, capacity,
-                                                  required_count);
+    if (vector_count != 0U && results == NULL) return -1;
+    for (i = 0U; i < vector_count; ++i) {
+        AmiHeurVectorSpec spec;
+        rc = build_spec(&slots[i], names[i], expected_starts[i],
+                        expected_ends[i], &spec);
+        if (rc != 0) return rc;
+        rc = inspect_one(&spec, inventory, rules, rule_count, &results[i]);
+        if (rc != 0) return rc;
+    }
+    *required_count = vector_count;
+    return 0;
 }
 
 int amiheur_vector_pipeline_with_memory(const AmiHeurVectorSlot *slots,
@@ -85,34 +97,35 @@ int amiheur_vector_pipeline_with_memory(const AmiHeurVectorSlot *slots,
                             size_t capacity,
                             size_t *required_count)
 {
-    AmiHeurVectorSpec specs[AMIHEUR_PIPELINE_MAX_VECTORS];
-    AmiHeurTargetCode code[AMIHEUR_PIPELINE_MAX_VECTORS];
     size_t i;
     int rc = validate(slots, names, expected_starts, expected_ends,
                       vector_count, inventory, capacity, required_count);
     if (rc != 0) return rc;
     if (memory == NULL || memory_size == 0U) return -1;
     if (code_region_count != 0U && code_regions == NULL) return -1;
-    rc = build_specs(slots, names, expected_starts, expected_ends,
-                     vector_count, specs);
-    if (rc != 0) return rc;
+    if (vector_count != 0U && results == NULL) return -1;
 
     for (i = 0U; i < vector_count; ++i) {
+        AmiHeurVectorSpec spec;
+        AmiHeurTargetCode code;
+        rc = build_spec(&slots[i], names[i], expected_starts[i],
+                        expected_ends[i], &spec);
+        if (rc != 0) return rc;
         rc = amiheur_target_code_read(code_regions, code_region_count,
-                                      specs[i].target, memory, memory_start,
+                                      spec.target, memory, memory_start,
                                       memory_size,
                                       AMIHEUR_PATCH_FINGERPRINT_SIZE,
-                                      &code[i]);
+                                      &code);
         if (rc < 0) return -4;
         if (rc == 1) {
-            specs[i].target_code = code[i].bytes;
-            specs[i].target_code_size = code[i].size;
+            spec.target_code = code.bytes;
+            spec.target_code_size = code.size;
         }
+        rc = inspect_one(&spec, inventory, rules, rule_count, &results[i]);
+        if (rc != 0) return rc;
     }
-    return amiheur_vector_inspect_with_allowlist(specs, vector_count,
-                                                  inventory, rules, rule_count,
-                                                  results, capacity,
-                                                  required_count);
+    *required_count = vector_count;
+    return 0;
 }
 
 int amiheur_vector_pipeline_with_amiga_regions(const AmiHeurVectorSlot *slots,
