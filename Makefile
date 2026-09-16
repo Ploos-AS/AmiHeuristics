@@ -68,8 +68,8 @@ $(TEST_PATCH_ALLOWLIST): tests/test_patch_allowlist.c src/memory/patch_allowlist
 $(TEST_VECTOR_READER): tests/test_vector_reader.c src/memory/vector_reader.c include/amiheuristics/vector_reader.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_vector_reader.c src/memory/vector_reader.c
 
-$(TEST_VECTOR_PIPELINE): tests/test_vector_pipeline.c src/memory/vector_pipeline.c src/memory/target_code.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c include/amiheuristics/vector_pipeline.h include/amiheuristics/target_code.h include/amiheuristics/vector_reader.h include/amiheuristics/vector_inspect.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_vector_pipeline.c src/memory/vector_pipeline.c src/memory/target_code.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c
+$(TEST_VECTOR_PIPELINE): tests/test_vector_pipeline.c src/memory/vector_pipeline.c src/memory/target_code.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c src/amiga/code_regions.c include/amiheuristics/vector_pipeline.h include/amiheuristics/target_code.h include/amiheuristics/amiga_code_regions.h include/amiheuristics/vector_reader.h include/amiheuristics/vector_inspect.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_vector_pipeline.c src/memory/vector_pipeline.c src/memory/target_code.c src/memory/vector_inspect.c src/memory/vector.c src/memory/inventory.c src/memory/patch_allowlist.c src/amiga/code_regions.c
 
 check: all
 	./$(TEST_SCORE)
