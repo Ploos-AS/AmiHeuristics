@@ -39,4 +39,10 @@ size_t amiheur_inventory_regions(const AmiHeurInventory *inventory,
                                  AmiHeurMemoryRegion *regions,
                                  size_t capacity);
 
+/* Constant-space lookup used by low-memory live-vector inspection.
+ * Returns 1 when address is owned, 0 when unknown, -1 on invalid input. */
+int amiheur_inventory_find_region(const AmiHeurInventory *inventory,
+                                  unsigned long address,
+                                  AmiHeurMemoryRegion *region);
+
 #endif
