@@ -9,8 +9,6 @@ static int inspect_vectors(const AmiHeurVectorSpec *vectors,
                            size_t capacity,
                            size_t *required_count)
 {
-    AmiHeurMemoryRegion regions[AMIHEUR_INVENTORY_MAX_ITEMS];
-    size_t region_count;
     size_t i;
 
     if (required_count == NULL || inventory == NULL) return -1;
@@ -21,13 +19,13 @@ static int inspect_vectors(const AmiHeurVectorSpec *vectors,
     *required_count = vector_count;
     if (vector_count > capacity) return -2;
 
-    region_count = amiheur_inventory_regions(inventory, regions,
-                                             AMIHEUR_INVENTORY_MAX_ITEMS);
-    if (region_count != inventory->count) return -3;
-
     for (i = 0U; i < vector_count; ++i) {
         AmiHeurVectorObservation obs;
+        AmiHeurMemoryRegion region;
+        const AmiHeurMemoryRegion *regions;
+        size_t region_count;
         AmiHeurPatchCandidate candidate;
+        int found;
         int match;
 
         if (vectors[i].name == NULL ||
@@ -41,6 +39,12 @@ static int inspect_vectors(const AmiHeurVectorSpec *vectors,
         results[i].target = vectors[i].target;
         results[i].known_patch = 0;
         results[i].matched_patch_rule = (size_t)-1;
+
+        found = amiheur_inventory_find_region(inventory, vectors[i].target,
+                                               &region);
+        if (found < 0) return -3;
+        regions = found == 1 ? &region : NULL;
+        region_count = found == 1 ? 1U : 0U;
         if (amiheur_memory_analyze_vector(&obs, regions, region_count,
                                           &results[i].provenance) != 0)
             return -3;
