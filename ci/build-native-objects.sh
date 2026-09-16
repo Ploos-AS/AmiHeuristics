@@ -36,4 +36,4 @@ if ! grep -Eiq 'm68k|68000|Amiga' "$OUT/file.txt"; then
   exit 1
 fi
 
-printf 'STATUS=PASS\nGATE=M3_18_NATIVE_VECTOR_PIPELINE_COMPILE\nIMAGE=%s\n' "$IMAGE" | tee "$OUT/result.txt"
+printf 'STATUS=PASS\nGATE=M3_19_NATIVE_PIPELINE_HARDENING\nIMAGE=%s\n' "$IMAGE" | tee "$OUT/result.txt"
