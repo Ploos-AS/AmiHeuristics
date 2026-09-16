@@ -11,6 +11,8 @@ int main(void)
     AmiHeurVectorInspection results[3];
     AmiHeurPatchRule rule;
     AmiHeurCodeRegion code_region;
+    AmiHeurAmigaCodeRegionSet amiga_regions;
+    AmiHeurResidentRegionView resident;
     unsigned char memory[0x2000];
     const char *names[3];
     unsigned long starts[3];
@@ -46,18 +48,30 @@ int main(void)
     rule.owner_name = "patcher";
     memcpy(rule.fingerprint, "PATCH123", 8U); rule.fingerprint_size = 8U;
 
-    /* Inventory ownership alone must not authorize reading target bytes. */
     rc = amiheur_vector_pipeline_with_memory(slots, names, starts, ends, 3U,
                                  &inventory, &rule, 1U, NULL, 0U,
                                  memory, 0x10000UL, sizeof(memory),
                                  results, 3U, &required);
-    CHECK(rc == 0);
-    CHECK(results[1].known_patch == 0);
+    CHECK(rc == 0 && results[1].known_patch == 0);
     CHECK(results[1].adjusted_score == 20);
 
     code_region.start = 0x11100UL; code_region.end = 0x111ffUL;
     rc = amiheur_vector_pipeline_with_memory(slots, names, starts, ends, 3U,
                                  &inventory, &rule, 1U, &code_region, 1U,
+                                 memory, 0x10000UL, sizeof(memory),
+                                 results, 3U, &required);
+    CHECK(rc == 0 && results[1].known_patch == 1);
+    CHECK(results[1].adjusted_score == 0);
+
+    /* M3.15: validated Resident extent feeds the same authorization path. */
+    amiheur_amiga_code_regions_init(&amiga_regions);
+    resident.self_address = 0x11000UL;
+    resident.match_tag = 0x11000UL;
+    resident.end_skip = 0x12000UL;
+    CHECK(amiheur_amiga_code_regions_add_residents(&amiga_regions,
+                                                    &resident, 1U) == 0);
+    rc = amiheur_vector_pipeline_with_amiga_regions(slots, names, starts, ends,
+                                 3U, &inventory, &rule, 1U, &amiga_regions,
                                  memory, 0x10000UL, sizeof(memory),
                                  results, 3U, &required);
     CHECK(rc == 0);
@@ -66,8 +80,8 @@ int main(void)
     CHECK(results[2].known_patch == 0);
 
     memory[0x1100] ^= 1U;
-    rc = amiheur_vector_pipeline_with_memory(slots, names, starts, ends, 3U,
-                                 &inventory, &rule, 1U, &code_region, 1U,
+    rc = amiheur_vector_pipeline_with_amiga_regions(slots, names, starts, ends,
+                                 3U, &inventory, &rule, 1U, &amiga_regions,
                                  memory, 0x10000UL, sizeof(memory),
                                  results, 3U, &required);
     CHECK(rc == 0 && results[1].known_patch == 0);
@@ -77,6 +91,6 @@ int main(void)
                                  &inventory, NULL, 0U, results, 3U, &required);
     CHECK(rc == -3);
 
-    printf("PASS: confirmed-code vector fingerprint pipeline\n");
+    printf("PASS: Resident-authorized vector fingerprint pipeline\n");
     return 0;
 }
