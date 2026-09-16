@@ -27,6 +27,8 @@ compile src/amiga/inventory_native.c "$OUT/inventory_native.o"
 compile src/amiga/vector_reader_native.c "$OUT/vector_reader_native.o"
 compile src/amiga/code_regions.c "$OUT/code_regions.o"
 compile src/amiga/vector_pipeline_native.c "$OUT/vector_pipeline_native.o"
+compile src/amiga/snapshot_native.c "$OUT/snapshot_native.o"
+compile src/memory/amiga_snapshot.c "$OUT/amiga_snapshot.o"
 
 file "$OUT"/*.o | tee "$OUT/file.txt"
 sha256sum "$OUT"/*.o | tee "$OUT/objects.sha256"
@@ -36,4 +38,4 @@ if ! grep -Eiq 'm68k|68000|Amiga' "$OUT/file.txt"; then
   exit 1
 fi
 
-printf 'STATUS=PASS\nGATE=M3_19_NATIVE_PIPELINE_HARDENING\nIMAGE=%s\n' "$IMAGE" | tee "$OUT/result.txt"
+printf 'STATUS=PASS\nGATE=M3_20_NATIVE_SNAPSHOT_CAPTURE\nIMAGE=%s\n' "$IMAGE" | tee "$OUT/result.txt"
