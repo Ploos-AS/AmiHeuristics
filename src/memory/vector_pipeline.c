@@ -114,3 +114,29 @@ int amiheur_vector_pipeline_with_memory(const AmiHeurVectorSlot *slots,
                                                   results, capacity,
                                                   required_count);
 }
+
+int amiheur_vector_pipeline_with_amiga_regions(const AmiHeurVectorSlot *slots,
+                            const char *const *names,
+                            const unsigned long *expected_starts,
+                            const unsigned long *expected_ends,
+                            size_t vector_count,
+                            const AmiHeurInventory *inventory,
+                            const AmiHeurPatchRule *rules,
+                            size_t rule_count,
+                            const AmiHeurAmigaCodeRegionSet *code_regions,
+                            const unsigned char *memory,
+                            unsigned long memory_start,
+                            size_t memory_size,
+                            AmiHeurVectorInspection *results,
+                            size_t capacity,
+                            size_t *required_count)
+{
+    if (code_regions == NULL) return -1;
+    if (code_regions->count > AMIHEUR_AMIGA_CODE_REGION_MAX) return -1;
+    return amiheur_vector_pipeline_with_memory(slots, names,
+                            expected_starts, expected_ends, vector_count,
+                            inventory, rules, rule_count,
+                            code_regions->regions, code_regions->count,
+                            memory, memory_start, memory_size,
+                            results, capacity, required_count);
+}
