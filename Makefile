@@ -13,6 +13,7 @@ TEST_MEMORY := $(BUILD_DIR)/test_memory
 TEST_INVENTORY := $(BUILD_DIR)/test_inventory
 TEST_SNAPSHOT := $(BUILD_DIR)/test_snapshot
 TEST_SNAPSHOT_SCORE := $(BUILD_DIR)/test_snapshot_score
+TEST_SNAPSHOT_PROVENANCE := $(BUILD_DIR)/test_snapshot_provenance
 TEST_AMIGA_INVENTORY := $(BUILD_DIR)/test_amiga_inventory
 TEST_AMIGA_CODE_REGIONS := $(BUILD_DIR)/test_amiga_code_regions
 TEST_VECTOR_INSPECT := $(BUILD_DIR)/test_vector_inspect
@@ -22,7 +23,7 @@ TEST_VECTOR_PIPELINE := $(BUILD_DIR)/test_vector_pipeline
 
 .PHONY: all check clean
 
-all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_SNAPSHOT_SCORE) $(TEST_AMIGA_INVENTORY) $(TEST_AMIGA_CODE_REGIONS) $(TEST_VECTOR_INSPECT) $(TEST_PATCH_ALLOWLIST) $(TEST_VECTOR_READER) $(TEST_VECTOR_PIPELINE)
+all: $(TEST_SCORE) $(TEST_BOOT) $(TEST_M68K) $(TEST_EXEC_LVO) $(TEST_HUNK) $(TEST_HUNK_BENIGN) $(TEST_MEMORY) $(TEST_INVENTORY) $(TEST_SNAPSHOT) $(TEST_SNAPSHOT_SCORE) $(TEST_SNAPSHOT_PROVENANCE) $(TEST_AMIGA_INVENTORY) $(TEST_AMIGA_CODE_REGIONS) $(TEST_VECTOR_INSPECT) $(TEST_PATCH_ALLOWLIST) $(TEST_VECTOR_READER) $(TEST_VECTOR_PIPELINE)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -57,6 +58,9 @@ $(TEST_SNAPSHOT): tests/test_snapshot.c src/memory/snapshot.c include/amiheurist
 $(TEST_SNAPSHOT_SCORE): tests/test_snapshot_score.c src/memory/snapshot_score.c src/core/score.c include/amiheuristics/snapshot_score.h include/amiheuristics/snapshot.h include/amiheuristics/amiheuristics.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_snapshot_score.c src/memory/snapshot_score.c src/core/score.c
 
+$(TEST_SNAPSHOT_PROVENANCE): tests/test_snapshot_provenance.c src/memory/snapshot_provenance.c src/memory/inventory.c src/core/score.c include/amiheuristics/snapshot_provenance.h include/amiheuristics/snapshot.h include/amiheuristics/inventory.h include/amiheuristics/amiheuristics.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_snapshot_provenance.c src/memory/snapshot_provenance.c src/memory/inventory.c src/core/score.c
+
 $(TEST_AMIGA_INVENTORY): tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c include/amiheuristics/amiga_inventory.h include/amiheuristics/inventory.h include/amiheuristics/memory.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_amiga_inventory.c src/amiga/inventory_collect.c src/memory/inventory.c
 
@@ -86,6 +90,7 @@ check: all
 	./$(TEST_INVENTORY)
 	./$(TEST_SNAPSHOT)
 	./$(TEST_SNAPSHOT_SCORE)
+	./$(TEST_SNAPSHOT_PROVENANCE)
 	./$(TEST_AMIGA_INVENTORY)
 	./$(TEST_AMIGA_CODE_REGIONS)
 	./$(TEST_VECTOR_INSPECT)
